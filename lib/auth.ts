@@ -20,23 +20,33 @@ declare module "next-auth" {
   }
 }
 
-// Hardcoded test users (password is "password123" for all)
-const testUsers = [
-  {
-    id: "user-1",
-    username: "user1",
-    displayName: "User One",
-    passwordHash: "$2a$12$R9h7cIPz0gi.URNNGHQ1GO3ng8KwuCnWM1p3pDRB1.X8bHdSxLBG",
-    avatarColor: "#6366f1",
-  },
-  {
-    id: "user-2",
-    username: "user2",
-    displayName: "User Two",
-    passwordHash: "$2a$12$R9h7cIPz0gi.URNNGHQ1GO3ng8KwuCnWM1p3pDRB1.X8bHdSxLBG",
-    avatarColor: "#8b5cf6",
-  },
-];
+async function getUsers() {
+  try {
+   const SHEET_ID = "1DeO6gNvnD-UhRfD2jMr_5T1LhfEWZXJi3byVOHWa0Fo";
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
+    const response = await fetch(url);
+    const csv = await response.text();
+    
+    const lines = csv.split("\n").slice(1); // Skip header
+    const users = lines
+      .filter(line => line.trim())
+      .map(line => {
+        const [username, password, displayName, avatarColor] = line.split(",");
+        return {
+          id: `user-${username}`,
+          username: username.trim().toLowerCase(),
+          password: password.trim(),
+          displayName: displayName.trim(),
+          avatarColor: avatarColor.trim() || "#6366f1",
+        };
+      });
+    
+    return users;
+  } catch (error) {
+    console.error("Failed to fetch users:", error);
+    return [];
+  }
+}
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
@@ -54,18 +64,15 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) return null;
 
-        const user = testUsers.find(
+        const users = await getUsers();
+        const user = users.find(
           (u) => u.username === credentials.username.toLowerCase().trim()
         );
 
         if (!user) return null;
 
-        const passwordMatch = await bcrypt.compare(
-          credentials.password,
-          user.passwordHash
-        );
-
-        if (!passwordMatch) return null;
+        // For Google Sheets: plain text comparison (or use bcrypt if you store hashes)
+        if (credentials.password !== user.password) return null;
 
         return {
           id: user.id,
