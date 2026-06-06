@@ -9,9 +9,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const user = session.user as any;
+  const userId = user.id;
+
   const conversations = await prisma.conversation.findMany({
     where: {
-      OR: [{ userAId: session.user.id }, { userBId: session.user.id }],
+      OR: [{ userAId: userId }, { userBId: userId }],
     },
     include: {
       participantA: {
@@ -40,6 +43,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const user = session.user as any;
+  const userId = user.id;
+
   const { username } = await req.json();
 
   const targetUser = await prisma.user.findUnique({
@@ -51,7 +57,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  if (targetUser.id === session.user.id) {
+  if (targetUser.id === userId) {
     return NextResponse.json(
       { error: "Cannot message yourself" },
       { status: 400 }
@@ -60,9 +66,9 @@ export async function POST(req: NextRequest) {
 
   // Canonical ordering (smaller id first) to prevent duplicates
   const [userAId, userBId] =
-    session.user.id < targetUser.id
-      ? [session.user.id, targetUser.id]
-      : [targetUser.id, session.user.id];
+    userId < targetUser.id
+      ? [userId, targetUser.id]
+      : [targetUser.id, userId];
 
   const conversation = await prisma.conversation.upsert({
     where: { userAId_userBId: { userAId, userBId } },
