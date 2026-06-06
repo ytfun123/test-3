@@ -5,13 +5,17 @@ import { ChatShell } from "@/components/chat/ChatShell";
 export default async function ChatPage() {
   const session = await getServerSession(authOptions);
 
+  if (!session?.user) {
+    return null;
+  }
+
   return (
     <ChatShell
       currentUser={{
-        id: session!.user.id,
-        username: (session!.user as any).username,
-        displayName: session!.user.name ?? "",
-        avatarColor: (session!.user as any).avatarColor ?? "#6366f1",
+        id: session.user.id,
+        username: (session.user as any).username,
+        displayName: session.user.name ?? "",
+        avatarColor: (session.user as any).avatarColor ?? "#6366f1",
       }}
     />
   );
