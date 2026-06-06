@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String    @id @default(cuid())
+  username       String    @unique
+  passwordHash   String
+  email          String?   @unique
+  phone          String?   @unique
+  displayName    String?
+  avatarColor    String    @default("#6366f1")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  sentMessages     Message[]       @relation("SentMessages")
+  conversationsA   Conversation[]  @relation("ParticipantA")
+  conversationsB   Conversation[]  @relation("ParticipantB")
+
+  @@map("users")
+}
+
+model Conversation {
+  id           String    @id @default(cuid())
+  participantA User      @relation("ParticipantA", fields: [userAId], references: [id])
+  userAId      String
+  participantB User      @relation("ParticipantB", fields: [userBId], references: [id])
+  userBId      String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  messages     Message[]
+
+  @@unique([userAId, userBId])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  content        String
+  sender         User         @relation("SentMessages", fields: [senderId], references: [id])
+  senderId       String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversationId String
+  readAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@map("messages")
+}
