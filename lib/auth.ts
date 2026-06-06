@@ -13,7 +13,6 @@ declare module "next-auth" {
       avatarColor: string;
     };
   }
-
   interface User {
     id: string;
     username: string;
@@ -21,23 +20,8 @@ declare module "next-auth" {
   }
 }
 
-// Mock users for testing (no database needed)
-const mockUsers = [
-  {
-    id: "user-1",
-    username: "testuser",
-    displayName: "Test User",
-    passwordHash: "$2a$12$R9h7cIPz0gi.URNNGHQ1GO3ng8KwuCnWM1p3pDRB1.X8bHdSxLBG",
-    avatarColor: "#6366f1",
-  },
-  {
-    id: "user-2",
-    username: "testuser2",
-    displayName: "Test User 2",
-    passwordHash: "$2a$12$R9h7cIPz0gi.URNNGHQ1GO3ng8KwuCnWM1p3pDRB1.X8bHdSxLBG",
-    avatarColor: "#8b5cf6",
-  },
-];
+// In-memory storage (resets on redeploy)
+let registeredUsers: any[] = [];
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
@@ -55,7 +39,7 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) return null;
 
-        const user = mockUsers.find(
+        const user = registeredUsers.find(
           (u) => u.username === credentials.username.toLowerCase().trim()
         );
 
@@ -70,7 +54,7 @@ export const authOptions: NextAuthOptions = {
 
         return {
           id: user.id,
-          name: user.displayName || user.username,
+          name: user.displayName,
           username: user.username,
           avatarColor: user.avatarColor,
         };
@@ -96,3 +80,12 @@ export const authOptions: NextAuthOptions = {
     },
   },
 };
+
+// Export so signup can add users
+export function addUser(user: any) {
+  registeredUsers.push(user);
+}
+
+export function userExists(username: string) {
+  return registeredUsers.some(u => u.username === username.toLowerCase().trim());
+}
