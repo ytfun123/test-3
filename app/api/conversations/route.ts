@@ -22,7 +22,6 @@ export async function POST(req: NextRequest) {
 
   const { content, conversationId } = parsed.data;
 
-  // Verify sender is part of this conversation
   const conversation = await prisma.conversation.findFirst({
     where: {
       id: conversationId,
@@ -50,13 +49,11 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // Update conversation timestamp
   await prisma.conversation.update({
     where: { id: conversationId },
     data: { updatedAt: new Date() },
   });
 
-  // Trigger Pusher event
   await pusherServer.trigger(
     `conversation-${conversationId}`,
     "new-message",
@@ -84,7 +81,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "conversationId required" }, { status: 400 });
   }
 
-  // Verify access
   const conversation = await prisma.conversation.findFirst({
     where: {
       id: conversationId,
