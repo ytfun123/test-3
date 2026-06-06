@@ -12,8 +12,8 @@ export async function POST(req: NextRequest) {
   }
 
   const user = session.user as any;
-  const userId = user.id;
-  
+  const senderId = user.id;
+
   const body = await req.json();
   const parsed = messageSchema.safeParse(body);
   if (!parsed.success) {
@@ -27,8 +27,8 @@ export async function POST(req: NextRequest) {
     where: {
       id: conversationId,
       OR: [
-        { userAId: userId },
-        { userBId: userId },
+        { userAId: senderId },
+        { userBId: senderId },
       ],
     },
   });
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
   const message = await prisma.message.create({
     data: {
       content,
-      senderId: userId,
+      senderId,
       conversationId,
     },
     include: {
