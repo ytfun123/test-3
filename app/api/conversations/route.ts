@@ -2,6 +2,69 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { pusherServer } from "@/lib/pusher";
+import { messageSchema } from "@/lib/validations";
+
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const user = session.user as any;
+  const userId = user.id;
+  
+  const body = await req.json();
+  const parsed = messageSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+  }
+
+  const { content, conversationId } = parsed.data;
+
+  // Verify sender is part of this conversation
+  const conversation = await prisma.conversation.findFirst({
+    where: {
+      id: conversationId,
+      OR: [
+        { userAId: userId },
+        { userBId: userId },
+      ],
+    },
+  });
+
+  if (!conversation) {
+    return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+  }
+
+  const message = await prisma.message.create({
+    data: {
+      content,
+      senderId: userId,
+      conversationId,
+    },
+    include: {
+      sender: {
+        select: { id: true, username: true, displayName: true, avatarColor: true },
+      },
+    },
+  });
+
+  // Update conversation timestamp
+  await prisma.conversation.update({
+    where: { id: conversationId },
+    data: { updatedAt: new Date() },
+  });
+
+  // Trigger Pusher event
+  await pusherServer.trigger(
+    `conversation-${conversationId}`,
+    "new-message",
+    message
+  );
+
+  return NextResponse.json({ message }, { status: 201 });
+}
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -12,78 +75,45 @@ export async function GET(req: NextRequest) {
   const user = session.user as any;
   const userId = user.id;
 
-  const conversations = await prisma.conversation.findMany({
+  const { searchParams } = new URL(req.url);
+  const conversationId = searchParams.get("conversationId");
+  const cursor = searchParams.get("cursor");
+  const limit = 40;
+
+  if (!conversationId) {
+    return NextResponse.json({ error: "conversationId required" }, { status: 400 });
+  }
+
+  // Verify access
+  const conversation = await prisma.conversation.findFirst({
     where: {
+      id: conversationId,
       OR: [{ userAId: userId }, { userBId: userId }],
     },
+  });
+
+  if (!conversation) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const messages = await prisma.message.findMany({
+    where: { conversationId },
     include: {
-      participantA: {
+      sender: {
         select: { id: true, username: true, displayName: true, avatarColor: true },
-      },
-      participantB: {
-        select: { id: true, username: true, displayName: true, avatarColor: true },
-      },
-      messages: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
-        include: {
-          sender: { select: { username: true } },
-        },
       },
     },
-    orderBy: { updatedAt: "desc" },
+    orderBy: { createdAt: "desc" },
+    take: limit + 1,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
   });
 
-  return NextResponse.json({ conversations });
-}
+  const hasMore = messages.length > limit;
+  if (hasMore) messages.pop();
 
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const user = session.user as any;
-  const userId = user.id;
-
-  const { username } = await req.json();
-
-  const targetUser = await prisma.user.findUnique({
-    where: { username: username.toLowerCase().trim() },
-    select: { id: true, username: true, displayName: true, avatarColor: true },
+  return NextResponse.json({
+    messages: messages.reverse(),
+    hasMore,
+    nextCursor: hasMore ? messages[0]?.id : null,
   });
-
-  if (!targetUser) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
-  }
-
-  if (targetUser.id === userId) {
-    return NextResponse.json(
-      { error: "Cannot message yourself" },
-      { status: 400 }
-    );
-  }
-
-  // Canonical ordering (smaller id first) to prevent duplicates
-  const [userAId, userBId] =
-    userId < targetUser.id
-      ? [userId, targetUser.id]
-      : [targetUser.id, userId];
-
-  const conversation = await prisma.conversation.upsert({
-    where: { userAId_userBId: { userAId, userBId } },
-    update: {},
-    create: { userAId, userBId },
-    include: {
-      participantA: {
-        select: { id: true, username: true, displayName: true, avatarColor: true },
-      },
-      participantB: {
-        select: { id: true, username: true, displayName: true, avatarColor: true },
-      },
-      messages: { take: 0 },
-    },
-  });
-
-  return NextResponse.json({ conversation }, { status: 201 });
 }
