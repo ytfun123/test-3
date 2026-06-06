@@ -9,7 +9,7 @@ type Props = {
 
 export function NewConversationModal({ onClose, onCreated }: Props) {
   const [search, setSearch] = useState("");
-  const [results, setResults] = useState<
+  const [results, setResults] = useState
     { id: string; username: string; displayName: string; avatarColor: string }[]
   >([]);
   const [loading, setLoading] = useState(false);
@@ -66,24 +66,33 @@ export function NewConversationModal({ onClose, onCreated }: Props) {
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Start a conversation</h2>
-          <button className="close-btn" onClick={onClose}>
+          <button className="close-btn" onClick={onClose} title="Close">
             ✕
           </button>
         </div>
 
-        <input
-          type="text"
-          className="search-input"
-          placeholder="Search username..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          autoFocus
-        />
+        <div className="modal-search-wrapper">
+          <svg className="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Search by username..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoFocus
+          />
+        </div>
 
         <div className="results">
-          {loading && <div className="result-empty">Searching...</div>}
+          {loading && search && <div className="result-loading">Searching...</div>}
           {!loading && search && results.length === 0 && (
-            <div className="result-empty">No users found</div>
+            <div className="result-empty">No users found matching "{search}"</div>
+          )}
+          {!search && (
+            <div className="result-empty">Type a username to start chatting</div>
           )}
           {results.map((user) => (
             <button
@@ -100,10 +109,11 @@ export function NewConversationModal({ onClose, onCreated }: Props) {
               </div>
               <div className="result-info">
                 <span className="result-name">
-                  {user.displayName || user.username}
+                  {user.displayName}
                 </span>
                 <span className="result-handle">@{user.username}</span>
               </div>
+              <div className="result-arrow">→</div>
             </button>
           ))}
         </div>
@@ -118,38 +128,39 @@ const modalStyles = `
   .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.6);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
     padding: 16px;
-    animation: fadeIn 0.15s ease-out;
+    animation: fadeIn 0.2s ease-out;
   }
 
   .modal-content {
     background: var(--bg-secondary);
     border: 1px solid var(--border);
-    border-radius: 16px;
+    border-radius: 20px;
     width: 100%;
-    max-width: 400px;
+    max-width: 450px;
     max-height: 600px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   }
 
   .modal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 20px;
+    padding: 24px;
     border-bottom: 1px solid var(--border);
+    background: var(--bg-secondary);
   }
 
   .modal-header h2 {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 600;
     color: var(--text-primary);
     margin: 0;
@@ -159,7 +170,7 @@ const modalStyles = `
     background: none;
     border: none;
     color: var(--text-muted);
-    font-size: 20px;
+    font-size: 24px;
     cursor: pointer;
     padding: 0;
     width: 32px;
@@ -167,7 +178,7 @@ const modalStyles = `
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 6px;
+    border-radius: 8px;
     transition: all 0.15s;
   }
 
@@ -176,21 +187,36 @@ const modalStyles = `
     color: var(--text-secondary);
   }
 
+  .modal-search-wrapper {
+    position: relative;
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 28px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+
   .search-input {
-    margin: 12px;
+    width: 100%;
     background: var(--bg-tertiary);
     border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 14px;
+    border-radius: 12px;
+    padding: 12px 16px 12px 40px;
     color: var(--text-primary);
-    font-size: 14px;
+    font-size: 15px;
     outline: none;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    transition: all 0.15s;
   }
 
   .search-input:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 2px var(--accent-glow);
+    box-shadow: 0 0 0 3px var(--accent-glow);
   }
 
   .search-input::placeholder {
@@ -211,19 +237,35 @@ const modalStyles = `
     justify-content: center;
     color: var(--text-muted);
     font-size: 14px;
+    padding: 32px;
+    text-align: center;
+  }
+
+  .result-loading {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    font-size: 14px;
   }
 
   .result-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 12px;
+    gap: 12px;
+    padding: 14px 16px;
     border: none;
     background: none;
     cursor: pointer;
     transition: background 0.12s;
     text-align: left;
     width: 100%;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .result-item:last-child {
+    border-bottom: none;
   }
 
   .result-item:hover {
@@ -236,13 +278,13 @@ const modalStyles = `
   }
 
   .result-avatar {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 600;
     color: white;
     flex-shrink: 0;
@@ -257,7 +299,7 @@ const modalStyles = `
   }
 
   .result-name {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 500;
     color: var(--text-primary);
     white-space: nowrap;
@@ -266,16 +308,18 @@ const modalStyles = `
   }
 
   .result-handle {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text-muted);
   }
 
+  .result-arrow {
+    color: var(--accent);
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
   @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 `;
