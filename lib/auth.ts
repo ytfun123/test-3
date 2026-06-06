@@ -20,8 +20,23 @@ declare module "next-auth" {
   }
 }
 
-// In-memory storage (resets on redeploy)
-let registeredUsers: any[] = [];
+// Hardcoded test users (password is "password123" for all)
+const testUsers = [
+  {
+    id: "user-1",
+    username: "user1",
+    displayName: "User One",
+    passwordHash: "$2a$12$R9h7cIPz0gi.URNNGHQ1GO3ng8KwuCnWM1p3pDRB1.X8bHdSxLBG",
+    avatarColor: "#6366f1",
+  },
+  {
+    id: "user-2",
+    username: "user2",
+    displayName: "User Two",
+    passwordHash: "$2a$12$R9h7cIPz0gi.URNNGHQ1GO3ng8KwuCnWM1p3pDRB1.X8bHdSxLBG",
+    avatarColor: "#8b5cf6",
+  },
+];
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
@@ -39,7 +54,7 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) return null;
 
-        const user = registeredUsers.find(
+        const user = testUsers.find(
           (u) => u.username === credentials.username.toLowerCase().trim()
         );
 
@@ -80,12 +95,3 @@ export const authOptions: NextAuthOptions = {
     },
   },
 };
-
-// Export so signup can add users
-export function addUser(user: any) {
-  registeredUsers.push(user);
-}
-
-export function userExists(username: string) {
-  return registeredUsers.some(u => u.username === username.toLowerCase().trim());
-}
