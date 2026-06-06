@@ -8,7 +8,7 @@ type Props = {
 };
 
 export function NewConversationModal({ onClose, onCreated }: Props) {
-  const [search, setSearch] = useState("");
+ const [search, setSearch] = useState("");
   const [results, setResults] = useState
     { id: string; username: string; displayName: string; avatarColor: string }[]
   >([]);
