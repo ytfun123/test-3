@@ -3,6 +3,25 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+      username: string;
+      avatarColor: string;
+    };
+  }
+
+  interface User {
+    id: string;
+    username: string;
+    avatarColor: string;
+  }
+}
+
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   pages: {
@@ -52,10 +71,10 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
-      if (token) {
+      if (session.user) {
         session.user.id = token.id as string;
-        (session.user as any).username = token.username;
-        (session.user as any).avatarColor = token.avatarColor;
+        session.user.username = token.username as string;
+        session.user.avatarColor = token.avatarColor as string;
       }
       return session;
     },
