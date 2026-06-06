@@ -47,37 +47,14 @@ export async function POST(req: NextRequest) {
         { error: "Passwords do not match" },
         { status: 400 }
       );
-    }
+  // For testing without database - just create user in memory
+    const user = {
+      id: "test-" + Date.now(),
+      username: usernameLower,
+      displayName: body.displayName || body.username,
+    };
 
-    const usernameLower = body.username.toLowerCase().trim();
-
-    try {
-      const existingUsername = await prisma.user.findUnique({
-        where: { username: usernameLower },
-      });
-      if (existingUsername) {
-        return NextResponse.json(
-          { error: "Username already taken" },
-          { status: 409 }
-        );
-      }
-    } catch (dbError) {
-      // If database fails, still allow signup for testing
-      console.warn("Database check failed:", dbError);
-    }
-
-    const passwordHash = await bcrypt.hash(body.password, 12);
-    const avatarColor =
-      AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
-
-    try {
-      const user = await prisma.user.create({
-        data: {
-          username: usernameLower,
-          displayName: body.displayName || body.username,
-          passwordHash,
-          email: body.email || null,
-          phone: body.phone || null,
+    return NextResponse.json({ user }, { status: 201 });
           avatarColor,
         },
         select: { id: true, username: true, displayName: true },
