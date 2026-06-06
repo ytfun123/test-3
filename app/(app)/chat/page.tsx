@@ -1,21 +1,24 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { ChatShell } from "@/components/chat/ChatShell";
+import { redirect } from "next/navigation";
 
 export default async function ChatPage() {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user) {
-    return null;
+  if (!session || !session.user) {
+    redirect("/login");
   }
+
+  const user = session.user as any;
 
   return (
     <ChatShell
       currentUser={{
-        id: session.user.id,
-        username: (session.user as any).username,
-        displayName: session.user.name ?? "",
-        avatarColor: (session.user as any).avatarColor ?? "#6366f1",
+        id: user.id,
+        username: user.username,
+        displayName: user.name ?? "",
+        avatarColor: user.avatarColor ?? "#6366f1",
       }}
     />
   );
