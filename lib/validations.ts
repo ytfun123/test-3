@@ -20,13 +20,13 @@ export const signupSchema = z
       .min(8, "Password must be at least 8 characters")
       .max(100, "Password too long"),
     confirmPassword: z.string(),
-    recoveryType: z.enum(["email", "phone"]),
-    email: z.string().email("Invalid email address").optional().or(z.literal("")),
-    phone: z
-      .string()
-      .regex(/^\+?[1-9]\d{6,14}$/, "Invalid phone number")
-      .optional()
-      .or(z.literal("")),
+    recoveryType: z.enum(["email", "phone"]).optional(),
+email: z.string().email("Invalid email address").optional().or(z.literal("")),
+phone: z
+  .string()
+  .regex(/^\+?[1-9]\d{6,14}$/, "Invalid phone number")
+  .optional()
+  .or(z.literal("")),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
