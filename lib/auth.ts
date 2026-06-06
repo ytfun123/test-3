@@ -1,7 +1,6 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import { prisma } from "./prisma";
 
 declare module "next-auth" {
   interface Session {
@@ -22,6 +21,24 @@ declare module "next-auth" {
   }
 }
 
+// Mock users for testing (no database needed)
+const mockUsers = [
+  {
+    id: "user-1",
+    username: "testuser",
+    displayName: "Test User",
+    passwordHash: "$2a$12$R9h7cIPz0gi.URNNGHQ1GO3ng8KwuCnWM1p3pDRB1.X8bHdSxLBG",
+    avatarColor: "#6366f1",
+  },
+  {
+    id: "user-2",
+    username: "testuser2",
+    displayName: "Test User 2",
+    passwordHash: "$2a$12$R9h7cIPz0gi.URNNGHQ1GO3ng8KwuCnWM1p3pDRB1.X8bHdSxLBG",
+    avatarColor: "#8b5cf6",
+  },
+];
+
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   pages: {
@@ -38,9 +55,9 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) return null;
 
-        const user = await prisma.user.findUnique({
-          where: { username: credentials.username.toLowerCase().trim() },
-        });
+        const user = mockUsers.find(
+          (u) => u.username === credentials.username.toLowerCase().trim()
+        );
 
         if (!user) return null;
 
@@ -55,7 +72,6 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           name: user.displayName || user.username,
           username: user.username,
-          email: user.email ?? undefined,
           avatarColor: user.avatarColor,
         };
       },
